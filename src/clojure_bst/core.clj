@@ -1,13 +1,26 @@
-(ns clojure-bst.core
-  ^{:doc
-      "Balanced binary search tree library (unfinished)."
-      :author "Jake Piccolo"})
+(ns ^{:doc "Balanced binary search tree library (unfinished)."
+      :author "Jake Piccolo"}
+  clojure-bst.core)
 
+
+;;;; Useful fn's ;;;;;;
 (defn- tree-member? [{:keys [data left right]} x]
   (cond
     (< x data) (tree-member? left x)
     (> x data) (tree-member? right x)
     :else true))
+
+(defn height [x]
+  (cond
+    (nil? x) 0
+    (contains? x :height) (:height x)
+    :else (inc (max (height (:left x)) (height (:right x))))))
+
+(defn tree-min [tree]
+  (->> (reductions get tree (repeat :left))
+       (take-while (complement nil?))
+       last
+       :data))
 
 (defn matches? [match-expr expr]
   (cond
@@ -18,6 +31,8 @@
 (defn all-match? [match-exprs exprs]
   (every? true? (map matches? match-exprs exprs)))
 
+
+;;;;;;;; Tree protocol ;;;;;;;
 (defprotocol BinarySearchTree
   (is-empty? [this])
   (insert [this x])
@@ -50,18 +65,6 @@
       (->RedBlackTree :black left data right)))
   (delete [this x] ,,,) ; TODO
   (member? [this x] (tree-member? this x)))
-
-(defn height [x]
-  (cond
-    (nil? x) 0
-    (contains? x :height) (:height x)
-    :else (inc (max (height (:left x)) (height (:right x))))))
-
-(defn tree-min [tree]
-  (->> (reductions get tree (repeat :left))
-       (take-while (complement nil?))
-       last
-       :data))
 
 
 ;;;;;;;; AVL implementations ;;;;;;;;;
@@ -98,7 +101,7 @@
     (> x data) (avl-balance (avl left data (avl-insert right x)))
     :else tree))
 
-(defn avl-remove-node [{:keys [left right]}]
+(defn- avl-remove-node [{:keys [left right]}]
   (condp all-match? [left right]
     [nil? nil?] nil   ; No children
     [nil? :_  ] right ; Right child only
@@ -106,30 +109,11 @@
     [:_   :_  ] (let [successor (tree-min right)]
                   (avl left successor (delete right successor)))))
 
-(defn avl-delete [{:keys [left data right] :as tree} x]
+(defn- avl-delete [{:keys [left data right] :as tree} x]
   (cond
     (< x data) (avl-balance (avl (delete left x) data right))
     (> x data) (avl-balance (avl left data (delete right x)))
     :else (avl-remove-node tree)))
-
-; #_(defn- avl-balance [left data right]
-;   (let [tree (avl left data right)]
-;     (condp all-match? (mapv balance-factor [left tree right])
-;       [[< 0] [> 1]  :_   ] (rotate :right (avl (rotate :left left) data right))
-;       [:_    [> 1]  :_   ] (rotate :right tree)
-;       [:_    [< -1] [> 0]] (rotate :left (avl left data (rotate :right right)))
-;       [:_    [< -1] :_   ] (rotate :left tree)
-;       tree)))
-
-; #_(defn- insert* [cons-fn bal-fn {:keys [left data right] :as tree} x]
-;   (cond
-;     (is-empty? tree) (cons-fn nil x nil)
-;     (< x data) (bal-fn (insert cons-fn bal-fn left x) data right)
-;     (> x data) (bal-fn left data (insert* cons-fn bal-fn right x))
-;     :else tree))
-
-; #_(defn- avl-insert [tree x]
-;   (insert* avl avl-balance tree x))
 
 
 ;;;;; Red-black implementations ;;;;;;;
@@ -161,9 +145,6 @@
     (> x data) (rbt-balance color left data (rbt-insert right x))
     :else tree))
 
-;;; TODO rbt-delete
-(defn rbt-delete [tree x]
-  )
 
 ;;;; Testing fns ;;;;
 (defn- rand-test
